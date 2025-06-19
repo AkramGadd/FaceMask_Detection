@@ -40,12 +40,45 @@ def DetectMask(frame, faceNet, maskNet):
 
     if len(faces) > 0:
         faces = np.array(faces, dtype = "float32")
-        preds = maskNet.predict(faces, batch_size = 32)
-    return (locs, preds)
+        pred = maskNet.predict(faces, batch_size = 32)
+    return (locs, pred)
 
-prototxtPath = "face_detector/deploy.prototxt"
-weightsPath = "face_detector/res10_300x300_ssd_iter_140000.caffemodel"
+base_path = os.path.dirname(os.path.abspath(__file__))
+prototxtPath = os.path.join(base_path, "face_detector", "deploy.prototxt")
+weightsPath = os.path.join(base_path, "face_detector", "res10_300x300_ssd_iter_140000.caffemodel")
 faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
-maskNet = load_model("mask_detection.h5")
+maskNet = load_model(os.path.join(base_path, "mask_detection.h5"))
+
+print("Model files:")
+print(f"Checking prototxt path: {prototxtPath} (exists: {os.path.exists(prototxtPath)})")
+print(f"Checking weights path: {weightsPath} (exists: {os.path.exists(weightsPath)})")
 
 print("starting camera...")
+
+vs = VideoStream(src=0).start()
+time.sleep(2.0)
+
+while True:
+    frame = vs.read()
+    frame = imutils.resize(frame, width=400)
+    (locs, preds) = DetectMask(frame, faceNet, maskNet)
+
+    for (box, pred) in zip(locs, preds):
+        (startX, startY, endX, endY) = box
+        (mask, withoutMask) = pred
+
+        label = "Mask" if mask > withoutMask else "No Mask"
+        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        label = f"{label}: {max(mask, withoutMask) * 100:.2f}%"
+
+        cv2.putText(frame, label, (startX, startY - 10),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+        cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
+
+    cv2.imshow("Face Mask Detection", frame)
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
+        break
+
+cv2.destroyAllWindows()
+vs.stop()
