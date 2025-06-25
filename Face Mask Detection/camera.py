@@ -64,6 +64,7 @@ base_path = os.path.dirname(os.path.abspath(__file__))
 prototxtPath = os.path.join(base_path, "face_detector", "deploy.prototxt")
 weightsPath = os.path.join(base_path, "face_detector", "res10_300x300_ssd_iter_140000.caffemodel")
 faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
+#this model was saved in .h5 format so if you have a different format you'll need to change it
 maskNet = load_model(os.path.join(base_path, "mask_detection.h5"))
 
 print("Model files:")
